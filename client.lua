@@ -1,10 +1,12 @@
-local QBCore = exports['qb-core']:GetCoreObject()
+--local QBCore = exports['qb-core']:GetCoreObject()
+local Framework = exports['710-lib']:GetFrameworkObject()
+local GConfig = Framework.Config()
 local currentJobStage = "WAITING"
 local GroupID = 0
 local isGroupLeader = false
 local GroupBlips = {}
 
-RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+--[[RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
     if GroupID ~= nil then
         TriggerServerEvent("groups:leaveGroup", GroupID)
         currentJobStage = "WAITING"
@@ -15,7 +17,7 @@ RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
             GroupBlips[i] = nil
         end
     end
-end)
+end)]]
 
 
 RegisterNetEvent("groups:createBlip", function(name, data)
@@ -139,11 +141,12 @@ RegisterNUICallback('close', function()
 end)
 
 RegisterNUICallback('group-create', function(data, cb)
-    local p = promise.new()
-    QBCore.Functions.TriggerCallback("groups:requestCreateGroup", function(r)
-        p:resolve(r)
-    end)
-    local d = Citizen.Await(p)
+   -- local p = promise.new()
+    local d = Framework.TriggerServerCallback('groups:requestCreateGroup')
+    --QBCore.Functions.TriggerCallback("groups:requestCreateGroup", function(r)
+       -- p:resolve(r)
+   -- end)
+    --local d = Citizen.Await(p)
     cb(d)
 end)
 
@@ -155,47 +158,37 @@ end)
 
 
 RegisterNUICallback('getActiveGroups', function(data, cb)
-    local request = promise.new()
-    QBCore.Functions.TriggerCallback("groups:getActiveGroups", function(result)
-        request:resolve(result)
-    end)
-    local data = Citizen.Await(request)
+    local data = Framework.TriggerServerCallback('groups:getActiveGroups')
     cb(data)
 end)
 
 local requestCooldown = false
 RegisterNUICallback('request-join', function(data, cb)
+    local Player = Framework.PlayerDataC()
     if not requestCooldown then
-        local request = promise.new()
-        QBCore.Functions.TriggerCallback("groups:requestJoinGroup", function(result)
-            request:resolve(result)
-        end, data.groupID)
-        local data = Citizen.Await(request)
+        local request = Framework.TriggerServerCallback('groups:requestJoinGroup', data.groupID)
         if request then 
-            QBCore.Functions.Notify("Join request sent", "success")
+            Player.Notify("Join request sent", "success")
         else 
-            QBCore.Functions.Notify("You cannot do that yet", "error")
+            Player.Notify("You cannot do that yet", "error")
         end
         requestCooldown = true
         Wait(5000)
         requestCooldown = false
     else 
-        QBCore.Functions.Notify("You need to wait before requesting again", "error")
+        Player.Notify("You need to wait before requesting again", "error")
     end
 end)
 
 RegisterNUICallback('view-requests', function(data, cb)
-    local request = promise.new()
-    QBCore.Functions.TriggerCallback("groups:getGroupRequests", function(result)
-        request:resolve(result)
-    end, data.groupID)
-    local data = Citizen.Await(request)
+    local data = Framework.TriggerServerCallback('groups:getGroupRequests', data.groupID)
     cb(data)
 end)
 
 RegisterNUICallback('update-status', function(data)
+    local Player = Framework.PlayerDataC()
     currentJobStage = data.status
-    QBCore.Functions.Notify("Your group status changed to "..currentJobStage, "primary")
+    Player.Notify("Your group status changed to "..currentJobStage, "info")
 end)
 
 RegisterNUICallback('request-accept', function(data)
@@ -226,11 +219,13 @@ RegisterNUICallback('group-destroy', function()
 end)
 
 
-RegisterCommand('group', function()
+RegisterCommand('groupMenu', function()
     openGroupMenu()
 end)
-RegisterKeyMapping("group", "Open Group Menu", "keyboard", "")
-
+--RegisterKeyMapping("group", "Open Group Menu", "keyboard", "")
+RegisterNetEvent('ps-groups:OpenMenu', function()
+    openGroupMenu()
+end)
 
 -- Returns Client side job stage
 exports("GetJobStage", function()

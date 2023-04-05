@@ -1,10 +1,12 @@
-local QBCore = exports['qb-core']:GetCoreObject()
+--local QBCore = exports['qb-core']:GetCoreObject()
+local Framework = exports['710-lib']:GetFrameworkObject()
+local GConfig = Framework.Config()
 local Groups = {} -- Don't Touch
 local Players = {} -- Don't Touch
 local Requests = {} -- Don't Touch
 local GroupData = {} -- Don't Touch
 
-local GroupLimit = 4 -- Maximum Number of players allowed per group
+local GroupLimit = 6 -- Maximum Number of players allowed per group
 
 
 -- Removes player from group when they leave the server.
@@ -17,9 +19,9 @@ AddEventHandler('playerDropped', function(reason)
 end)
 
 -- Player sends a requested asking the server if they can create a group.
-QBCore.Functions.CreateCallback("groups:requestCreateGroup", function(source, cb)
+Framework.RegisterServerCallback("groups:requestCreateGroup", function(source, cb)
     local src = source
-    local player = QBCore.Functions.GetPlayer(src)
+    local player = Framework.PlayerDataS(src)
     if not Players[src] then
         Players[src] = true
         local groupID = #Groups+1
@@ -33,15 +35,16 @@ QBCore.Functions.CreateCallback("groups:requestCreateGroup", function(source, cb
         GroupData[groupID] = {}
         cb({ groupID = groupID, name = GetPlayerCharName(src), id = src })
     else
-        TriggerClientEvent("QBCore:Notify", src, "You are already in a group", "error")
+        player.Notify("You are already in a group", "error")
+        --Framework.NotiS( src, "You are already in a group", "error")
         cb(false)
     end
 end)
 
 -- Get all active groups currently in the server.
-QBCore.Functions.CreateCallback("groups:getActiveGroups", function(source, cb)
+Framework.RegisterServerCallback("groups:getActiveGroups", function(source, cb)
     local src = source
-    local player = QBCore.Functions.GetPlayer(src)
+    local player = Framework.PlayerDataS(src)
 
     local temp = {}
     for k,v in pairs(Groups) do
@@ -55,9 +58,9 @@ QBCore.Functions.CreateCallback("groups:getActiveGroups", function(source, cb)
 end)
 
 -- Returns all current join requests for the specified groupID.
-QBCore.Functions.CreateCallback("groups:getGroupRequests", function(source, cb, groupID)
+Framework.RegisterServerCallback("groups:getGroupRequests", function(source, cb, groupID)
     local src = source
-    local player = QBCore.Functions.GetPlayer(src)
+    local player = Framework.PlayerDataS(src)
 
     local temp = {}
     if Requests[groupID] then 
@@ -71,7 +74,7 @@ QBCore.Functions.CreateCallback("groups:getGroupRequests", function(source, cb, 
 end)
 
 -- Sends a request to join the specified groupID
-QBCore.Functions.CreateCallback("groups:requestJoinGroup", function(source, cb, groupID)
+Framework.RegisterServerCallback("groups:requestJoinGroup", function(source, cb, groupID)
     local src = source
     local lead = Groups[groupID]["members"]["leader"]
     if not Players[src] then
@@ -82,16 +85,16 @@ QBCore.Functions.CreateCallback("groups:requestJoinGroup", function(source, cb, 
                 end
                 table.insert(Requests[groupID], src)
                 cb(true)
-                TriggerClientEvent("QBCore:Notify", lead, "Someone has requested to join the group", "success")
+                Framework.NotiS( lead, "Someone has requested to join the group", "success")
             else
-                TriggerClientEvent("QBCore:Notify", src, "The group is full", "error")
+                Framework.NotiS( src, "The group is full", "error")
             end
         else 
-            TriggerClientEvent("QBCore:Notify", src, "That group doesn't exist", "error")
+            Framework.NotiS( src, "That group doesn't exist", "error")
         end
         cb(true)
     else
-        TriggerClientEvent("QBCore:Notify", src, "You already have a request pending", "error")
+        Framework.NotiS( src, "You already have a request pending", "error")
         cb(false)
     end
 end)
@@ -105,7 +108,7 @@ RegisterNetEvent("groups:acceptRequest", function(player, groupID)
                 Requests[groupID][k] = nil
             end
         end
-        TriggerClientEvent("QBCore:Notify", player, "Your group join request was accepted", "success")
+        Framework.NotiS( player, "Your group join request was accepted", "success")
         TriggerClientEvent("groups:JoinGroup", player, groupID)
     end
 end)
@@ -118,17 +121,17 @@ RegisterNetEvent("groups:denyRequest", function(player, groupID)
             Requests[groupID][k] = nil
         end
     end
-    TriggerClientEvent("QBCore:Notify", player, "Your group join request was denied", "error")
+    Framework.NotiS( player, "Your group join request was denied", "error")
 end)
 
 -- Kicks the specified player from the group.
 RegisterNetEvent("groups:kickMember", function(player, groupID)
     RemovePlayerFromGroup(player, groupID)
-    TriggerClientEvent("QBCore:Notify", player, "You were removed from the group", "error")
+    Framework.NotiS( player, "You were removed from the group", "error")
 end)
 
 -- Returns all members in the specified groupID.
-QBCore.Functions.CreateCallback("groups:getGroupMembers", function(source, cb, groupID)
+Framework.RegisterServerCallback("groups:getGroupMembers", function(source, cb, groupID)
     local src = source
     local temp = {}
     local members = getGroupMembers(groupID)
@@ -183,12 +186,12 @@ function RemovePlayerFromGroup(player, groupID)
             if Groups[groupID]["members"]["leader"] == player then
                 if ChangeGroupLeader(groupID) then
                     Players[player] = nil
-                    TriggerClientEvent("QBCore:Notify", player, "You have left the group", "primary")
+                    Framework.NotiS( player, "You have left the group", "primary")
                     Wait(10)
                     UpdateGroupData(groupID)
                 else
                     Players[player] = nil
-                    TriggerClientEvent("QBCore:Notify", player, "You have left the group", "primary")
+                    Framework.NotiS( player, "You have left the group", "primary")
                     DestroyGroup(groupID)
                 end
             else
@@ -199,7 +202,7 @@ function RemovePlayerFromGroup(player, groupID)
                         Players[player] = nil
                     end
                 end
-                TriggerClientEvent("QBCore:Notify", player, "You have left the group", "primary")
+                Framework.NotiS( player, "You have left the group", "primary")
                 Wait(10)
                 UpdateGroupData(groupID)
             end
@@ -222,8 +225,8 @@ end
 
 -- Returns characters first and last name for the UI.
 function GetPlayerCharName(src)
-    local player = QBCore.Functions.GetPlayer(src)
-    return player.PlayerData.charinfo.firstname.." "..player.PlayerData.charinfo.lastname
+    local player = Framework.PlayerDataS(src)
+    return player.Name
 end
 
 -- Returns if player is the group leader.
@@ -381,6 +384,20 @@ function GroupEvent(groupID, event, args)
     end
 end
 exports("GroupEvent", GroupEvent)
+
+function GroupEventS(groupID, event, args)
+    if groupID == nil then return print("GroupEvent was sent an invalid groupID :"..groupID) end
+    if event == nil then return print("no valid event was passed to GroupEvent") end
+    local members = getGroupMembers(groupID)
+    for i=1,#members do
+        if args ~= nil then
+            TriggerEvent(event, members[i], table.unpack(args))
+        else 
+            TriggerEvent(event, members[i])
+        end
+    end
+end
+exports("GroupEventS", GroupEventS)
 
 function SetGroupData(groupID, key, data)
     if groupID == nil then return print("SetGroupData was sent an invalid groupID") end
