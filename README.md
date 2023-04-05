@@ -1,3 +1,6 @@
+## ALL CREDIT GOES TO PROJECT SLOTH 
+## I have just edited this to use 710-lib so it works on both ESX and QBCore :) 
+
 # THIS IS NOT A DRAG AND DROP SCRIPT
 This script is used as a tool to create and get data for player groups.
 There are no jobs or anything included with these files.
