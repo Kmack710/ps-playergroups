@@ -58,6 +58,9 @@ exports["ps-playergroups"]:FindGroupByMember(playerID)
 -- Triggers event for each member of a group. Args are optional.
 exports["ps-playergroups"]:GroupEvent(groupID, eventname, args) 
 
+--- Triggers server event for each group member.
+exports["ps-playergroups"]:GroupEventS(groupID, eventname, args) 
+
 Example: exports["ps-playergroups"]:GroupEvent(groupID, "my:event", {"one", 2, false}) 
 
 
